@@ -1,0 +1,2 @@
+#git+https://github.com/AB-CE/abce.git@26c1b4eb0526e1ad569246d7f3cf9130dcd13a29#egg=abce
+git+https://github.com/AB-CE/abce.git
