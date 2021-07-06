@@ -1,0 +1,20 @@
+{
+    "name": "abcEconomics",
+    "random_seed": 1625543982.0460498,
+    "firm": {
+        "simulation_parameters": {
+            "random_seed": 1,
+            "n_firms": 100,
+            "n_households": 100,
+            "rounds": 100
+        }
+    },
+    "household": {
+        "simulation_parameters": {
+            "random_seed": 1,
+            "n_firms": 100,
+            "n_households": 100,
+            "rounds": 100
+        }
+    }
+}

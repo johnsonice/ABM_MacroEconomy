@@ -1,0 +1,6 @@
+{
+    "name": "abcEconomics",
+    "random_seed": 1625514911.723832,
+    "firm": {},
+    "household": {}
+}

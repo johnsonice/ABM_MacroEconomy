@@ -1,0 +1,6 @@
+{
+    "name": "abcEconomics",
+    "random_seed": 1625514921.3137527,
+    "myagent": {},
+    "youragent": {}
+}
