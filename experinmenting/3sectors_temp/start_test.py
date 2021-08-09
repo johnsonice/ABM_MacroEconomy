@@ -63,13 +63,17 @@ if __name__ == '__main__':
     kids = drug_dealers + customers
     
     for r in range(4):
-        simulation.advance_round(r)
-        print('iteration {}'.format(r))
-        if r > 2:
-            pass
-        else:
-            drug_dealers.advertise()
-            
-        customers.print_offers()
-        kids.print_possessions()
-        print()
+        simulation.advance_round((r))
+        print(simulation.time)
+        for i in range(4):
+            simulation.advance_round((r,i))
+            print('iteration {}:{}'.format(r,i))
+            print(simulation.time)
+            if i > 2:
+                pass
+            else:
+                drug_dealers.advertise()
+                
+            customers.print_offers()
+            kids.print_possessions()
+            print()
