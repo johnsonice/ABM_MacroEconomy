@@ -10,17 +10,62 @@ class Firm(abce.Agent, abce.Firm):
         there is an initial endowment to avoid bootstrapping problems
         """
         self.simulation_parameters = simulation_parameters
-        self.price = {}
         self.create('money', 100)
-        self.create('consumption_good', 1)    # initiate with one good 
+        self.create('consumption_good', 1)                                                             ## initiate with one good 
         self.inputs = {"labor": 1}
         self.output = "consumption_good"      
-        self.outquatity = 2
-        self.price['consumption_good'] = 1
+        self.cobb_douglas_multiplier = 2
+        self.price = {'consumption_good':1,
+                      'labor':1}
         #self._inventory._perishable.append('labor') 
-        self.pf = self.create_cobb_douglas(self.output, self.outquatity, self.inputs)
-        self.balance = {}
+        self.pf = self.create_cobb_douglas(self.output, self.cobb_douglas_multiplier, self.inputs)     ## need to understand this a bit more 
+        self.balance_sheet = {}
+        self.iter_memory_current ={'iter':0,
+                                   'solvency_status': True,
+                                   'planned_production': 10,                                            ## very random, default to 4 for now
+                                   'labor_needed': 2,
+                                   'actual_production':None,
+                                   'current_debt':None,
+                                   'price_consumption_good':2,
+                                   'price_labor':1}
+        self.iter_memory_history = []
+        
+    #################################
+    #### Financial Market Open ###### 
+    #################################
+    def check_financial_viability(self):
+        """
+        to be implemented; 
+        
+        check sovency status, if false, delete/refill agent 
+        """
+        
+        return None
+        
     
+    def plan_production(self,Q=None):
+        """
+        to be implemented; 
+        
+        based on historical data, determine current production/ needed inputs / price
+        """
+        
+        
+        return None
+        
+    
+    
+    def request_credit(self):
+        needed_resource = slef.iter_memory_current['labor_needed']*slef.iter_memory_current['price_labor']
+        credit_needed = needed_resource - self.not_reserved('money')
+        if credit_needed>0:
+            ## request for credit 
+            self.send(('bank',0),'corporate_debt',{'firm_id':self.id,
+                                                   'amount':credit_needed,
+                                                    })
+        return None
+        
+        
     def filter_applications_and_send_offer(self,n_hires=5,print_apps=False):
         """
         send out conditional offer to qualified candidates
@@ -123,9 +168,9 @@ class Firm(abce.Agent, abce.Firm):
             Print out put for debugging. The default is False.
         ----------
         """
-        self.balance = self.possessions()
+        self.balance_sheet = self.possessions()
         if verbose:
-            print('firm id:{} ; balalnce: {}'.format(self.id,self.balance))
+            print('firm id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
     
     # def sell_goods(self):
     #     """ offers one unit of labor to firm 0, for the price of 1 "money" """

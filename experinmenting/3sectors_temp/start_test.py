@@ -23,7 +23,9 @@ class Kid(abce.Agent):
         for m in msgs:
             print(m)
         #print(self.get_messages('quote'))
-        
+    
+    def create_more_money(self):
+        self.create('money',200)
         
     def buy_drugs(self):
         drug_dealer_id = randrange(self.num_dealers)
@@ -73,7 +75,7 @@ if __name__ == '__main__':
                 pass
             else:
                 drug_dealers.advertise()
-                
-            customers.print_offers()
+            customers.create_more_money()
+            #customers.print_offers()
             kids.print_possessions()
             print()

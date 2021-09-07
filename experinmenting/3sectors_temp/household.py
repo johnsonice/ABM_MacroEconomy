@@ -15,6 +15,7 @@ class Household(abce.Agent, abce.Household):
         self.employer = None
         self._inventory._perishable.append('labor')  # TODO simplify this
         self.checkorder = None
+        self.balance_sheet = {}
     
     
     #################################
@@ -139,9 +140,9 @@ class Household(abce.Agent, abce.Household):
             Print out put for debugging. The default is False.
         ----------
         """
-        self.balance = self.possessions()
-        self.balance['employer'] = self.employer
+        self.balance_sheet = self.possessions()
+        self.balance_sheet['employer'] = self.employer
         if verbose:
-            print('household id:{} ; balalnce: {}'.format(self.id,self.balance))
+            print('household id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
 
     

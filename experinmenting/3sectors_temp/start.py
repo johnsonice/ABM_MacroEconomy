@@ -7,11 +7,13 @@ House earn wage from selling their laobr, buys comsumer goods and accumulate uti
 from abcEconomics import Simulation
 from firm import Firm
 from household import Household
+from bank import Bank
 
 
 simulation_parameters = {'random_seed': 1,
                          'n_firms':2,
                          'n_households':10,
+                         'n_banks':1,
                          'rounds':4,
                          'sub_hiring_rounds':2,
                          'sub_purchase_rounds':1}
@@ -20,6 +22,7 @@ w = Simulation()
 
 firms = w.build_agents(Firm, 'firm', simulation_parameters['n_firms'], simulation_parameters = simulation_parameters)
 households = w.build_agents(Household, 'household', simulation_parameters['n_households'],simulation_parameters = simulation_parameters)
+banks = w.build_agents(Bank, 'bank', simulation_parameters['n_banks'],simulation_parameters = simulation_parameters)
 
 for r in range(simulation_parameters['rounds']):
     w.advance_round(r)
@@ -65,11 +68,11 @@ for r in range(simulation_parameters['rounds']):
     #### Clean up things ######
     ###########################
     
-    firms.log_balance(verbose=False)                                                ## put all info in balance sheet
+    firms.log_balance(verbose=True)                                                ## put all info in balance sheet
     households.log_balance(verbose=False)                                           ## put all info in balance sheet
     (households + firms).refresh()                                                  ## firms labor = 0 ; household.employer = none
                                                                                     ## check order = None
-                                                                                    
+                                                                                  
     # firms.panel_log(goods=['consumption_good'])
     # households.panel_log(goods=['consumption_good'])
 
