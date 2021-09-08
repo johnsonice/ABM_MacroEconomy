@@ -51,7 +51,7 @@ class Household(abce.Agent, abce.Household):
             if print_decision:
                 print('household id: {}, take offer :{}'.format(self.id,employer_id))
             
-        
+        return self.balance_sheet
     def sell_labor(self,firm_id=None):
         if firm_id is None:
             """ offers one unit of labor to a random firm, for the price of 1 "money" """
@@ -145,4 +145,4 @@ class Household(abce.Agent, abce.Household):
         if verbose:
             print('household id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
 
-    
+        return self.balance_sheet

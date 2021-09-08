@@ -14,10 +14,11 @@ class Firm(abce.Agent, abce.Firm):
         self.create('consumption_good', 1)                                                             ## initiate with one good 
         self.inputs = {"labor": 1}
         self.output = "consumption_good"      
-        self.cobb_douglas_multiplier = 2
+        self.cobb_douglas_multiplier = 10
         self.price = {'consumption_good':1,
                       'labor':1}
-        #self._inventory._perishable.append('labor') 
+        # self._inventory._perishable.append('labor') 
+        # self._inventory._perishable.append('consumption_good') 
         self.pf = self.create_cobb_douglas(self.output, self.cobb_douglas_multiplier, self.inputs)     ## need to understand this a bit more 
         self.balance_sheet = {}
         self.iter_memory_current ={'iter':0,
@@ -27,7 +28,7 @@ class Firm(abce.Agent, abce.Firm):
                                    'actual_production':None,
                                    'current_debt':None,
                                    'price_consumption_good':2,
-                                   'price_labor':1}
+                                   'price_labor':5}
         self.iter_memory_history = []
         
     #################################
@@ -63,7 +64,7 @@ class Firm(abce.Agent, abce.Firm):
             self.send(('bank',0),'corporate_debt',{'firm_id':self.id,
                                                    'amount':credit_needed,
                                                     })
-        return None
+        return self.id,credit_needed
         
         
     def filter_applications_and_send_offer(self,n_hires=5,print_apps=False):
@@ -154,7 +155,8 @@ class Firm(abce.Agent, abce.Firm):
     def refresh(self):
         #### reset # labor available  
         n_labor = self.not_reserved('labor')
-        self.destroy('labor')  ## destroy all available labors 
+        self.destroy('labor')               ## destroy all available labors 
+        self.destroy('consumption_good')    ## destroy all good produced in this round 
         pass
     
     
@@ -171,7 +173,9 @@ class Firm(abce.Agent, abce.Firm):
         self.balance_sheet = self.possessions()
         if verbose:
             print('firm id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
-    
+        
+        return self.balance_sheet
+        
     # def sell_goods(self):
     #     """ offers one unit of labor to firm 0, for the price of 1 "money" """
     #     oo = self.get_offers(self.output)
