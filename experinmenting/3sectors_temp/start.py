@@ -11,8 +11,8 @@ from bank import Bank
 
 
 simulation_parameters = {'random_seed': 1,
-                         'n_firms':2,
-                         'n_households':10,
+                         'n_firms':4,
+                         'n_households':20,
                          'n_banks':1,
                          'rounds':4,
                          'sub_hiring_rounds':4,
@@ -24,10 +24,28 @@ firms = w.build_agents(Firm, 'firm', simulation_parameters['n_firms'], simulatio
 households = w.build_agents(Household, 'household', simulation_parameters['n_households'],simulation_parameters = simulation_parameters)
 banks = w.build_agents(Bank, 'bank', simulation_parameters['n_banks'],simulation_parameters = simulation_parameters)
 
+#%%
 for r in range(simulation_parameters['rounds']):
     w.advance_round(r)
     print('itetration:{}'.format(w.time))
     
+    
+    ###########################
+    #### Financial Market open#
+    ###########################
+    d_firms = firms.check_financial_viability()
+    dfs = [i for i in d_firms[0] if i is not None]
+    if len(dfs)>0:
+        firms.delete_agents(dfs)
+        print("Deletc frims: {}".foramt(dfs))
+    else:
+        print('no frims dropped out this round')
+    
+    firms.plan_production(verbose=True)
+    firms.request_credit(verbose=True)
+    
+    banks.distribute_credit(True)
+    firms.record_debt()
     ###########################
     #### Labor Market Open ####
     ###########################
@@ -40,10 +58,10 @@ for r in range(simulation_parameters['rounds']):
         w.advance_round((r,sub_r))                                                  ## there could be multiple rounds of applications
         print('itetration: {}'.format(w.time))
         households.apply_for_jobs()                                                 ## send messages to all firms
-        firms.filter_applications_and_send_offer(n_hires=5,print_apps=False)        ## filter and message to top 5 candidates
+        firms.filter_applications_and_send_offer(print_apps=False)        ## filter and message to top 5 candidates
         households.take_offer(print_decision=False)                                 ## hoursehold take the best offer and send back to firm
                                                                                     ## households.sell_labor() already part of take_offer
-        firms.buy_inputs()                                                          ## firm hire labor from the confirmed offer sent back from candidates
+        firms.buy_inputs(verbose=False)                                                          ## firm hire labor from the confirmed offer sent back from candidates
         households.check_job_offer(verbose=False)                                   ## see if is hired and update employer id
         
     ###########################

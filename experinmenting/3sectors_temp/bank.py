@@ -14,14 +14,19 @@ class Bank(abce.Agent):
     def init(self, simulation_parameters):
         self.simulation_parameters = simulation_parameters
         self.interest_rate = 0.02
-        self.financial_account = {}
+        self.create('money', 1000000)
+        self.financial_account = {'total_loan':0,
+                                  'interest_payment':0,
+                                  'bad_loan':0}
         
 
-    def distribute_credit(self):
-        msgs = self.get_messages('purchase_order')
+    def distribute_credit(self,verbose=False):
+        msgs = self.get_messages('corporate_debt')
+        for m in msgs:
+            self.send(('firm',m['firm_id']),'corporate_credit',{'amount':m['amount']})
+            self.give(('firm',m['firm_id']),good='money',quantity=m['amount'])
         
-        
-        
-        
+            if verbose:
+                print('send credit to firm id:{}; credit:{}'.format(m['firm_id'],m['amount']))
         
         return None

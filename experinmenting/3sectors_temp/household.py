@@ -15,6 +15,7 @@ class Household(abce.Agent, abce.Household):
         self.employer = None
         self._inventory._perishable.append('labor')  # TODO simplify this
         self.checkorder = None
+        self.labor_price = 4
         self.balance_sheet = {}
     
     
@@ -32,7 +33,7 @@ class Household(abce.Agent, abce.Household):
                 self.send(('firm',f),'application',{'household_id':self.id,
                                                       'product':'labor',
                                                       'amount':1,
-                                                      'price':1})
+                                                      'price':self.labor_price})
                 
     def take_offer(self,print_decision=False):
         """
@@ -52,6 +53,7 @@ class Household(abce.Agent, abce.Household):
                 print('household id: {}, take offer :{}'.format(self.id,employer_id))
             
         return self.balance_sheet
+    
     def sell_labor(self,firm_id=None):
         if firm_id is None:
             """ offers one unit of labor to a random firm, for the price of 1 "money" """
@@ -64,7 +66,7 @@ class Household(abce.Agent, abce.Household):
             offer = self.sell(('firm', firm_id), 
                               "labor", 
                               quantity=1, 
-                              price=1)
+                              price=self.labor_price)
             self.checkorder = offer
     
     def check_job_offer(self,verbose=False):
