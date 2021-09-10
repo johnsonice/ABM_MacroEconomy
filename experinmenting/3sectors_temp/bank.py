@@ -15,18 +15,40 @@ class Bank(abce.Agent):
         self.simulation_parameters = simulation_parameters
         self.interest_rate = 0.02
         self.create('money', 1000000)
-        self.financial_account = {'total_loan':0,
+        self.financial_account = {'outstanding_loan':0,
                                   'interest_payment':0,
-                                  'bad_loan':0}
+                                  'bad_loan':0,
+                                  }
+
+
+    def collect_payment(self):
+        msgs = self.get_messages('debt_payment')
+        for m in msgs:
+            self.financial_account['outstanding_loan'] -= m['principle_payment']
+            self.financial_account['interest_payment'] += m['interest_payment']
         
+        bl_msgs = self.get_messages('bad_loan')
+        for m in bl_msgs:
+            self.financial_account['outstanding_loan'] -= m['amount']
+            self.financial_account['bad_loan'] += m['amount']
+
+        return None
 
     def distribute_credit(self,verbose=False):
         msgs = self.get_messages('corporate_debt')
         for m in msgs:
             self.send(('firm',m['firm_id']),'corporate_credit',{'amount':m['amount']})
             self.give(('firm',m['firm_id']),good='money',quantity=m['amount'])
-        
+            
+            ## record load 
+            self.financial_account['outstanding_loan'] += m['amount']
+            
+            ## print for debugging 
             if verbose:
                 print('send credit to firm id:{}; credit:{}'.format(m['firm_id'],m['amount']))
         
         return None
+    
+    def log_balance_sheet(self,verbose=False):
+        if verbose:
+            print('bank balance:{}'.format(self.financial_account))

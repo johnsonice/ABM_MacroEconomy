@@ -34,6 +34,9 @@ for r in range(simulation_parameters['rounds']):
     #### Financial Market open#
     ###########################
     d_firms = firms.check_financial_viability()
+    banks.collect_payment()
+    
+    ## delete default firms 
     dfs = [i for i in d_firms[0] if i is not None]
     if len(dfs)>0:
         firms.delete_agents(dfs)
@@ -41,11 +44,14 @@ for r in range(simulation_parameters['rounds']):
     else:
         print('no frims dropped out this round')
     
+    ## plan production and get loans 
     firms.plan_production(verbose=True)
     firms.request_credit(verbose=True)
     
-    banks.distribute_credit(True)
+    banks.distribute_credit(verbose=True)
     firms.record_debt()
+    banks.log_balance_sheet(verbose=True)
+    
     ###########################
     #### Labor Market Open ####
     ###########################

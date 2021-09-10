@@ -54,14 +54,21 @@ class Firm(abce.Agent, abce.Firm):
         self.iter_memory_current['solvency_status'] = solvency_status
         
         if service_debt == True:
+            ## send money and message to bank 
             self.give(('bank',0),'money',debt_service)
+            self.send(('bank',0),'debt_payment',{'interest_payment':interest_payment,
+                                                 'principle_payment': principle_payment})
             ## update balance
             self.balance_sheet['money'] = self.not_reserved('money')
             self.balance_sheet['debt']-= principle_payment
             return None
         else:
-            ## return id for deletion 
+            ## Firm default / liquidate all assets 
             self.give(('bank',0),'money',self.not_reserved('money'))
+            ## calculate bad loand amount 
+            bad_loan = self.balance_sheet['debt']+interest_payment - self.not_reserved('money')
+            self.send(('bank',0),'bad_loan',{'amount':bad_loan})
+            ## return id for deletion 
             return 'firm',self.id
          
         
