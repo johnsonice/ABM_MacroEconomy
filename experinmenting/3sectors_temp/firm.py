@@ -16,8 +16,8 @@ class Firm(abce.Agent, abce.Firm):
         self.inputs = {"labor": 1}
         self.output = "consumption_good"      
         self.cobb_douglas_multiplier = 5
-        self.price = {'consumption_good':1,
-                      'labor':3}
+        # self.price = {'consumption_good':1,
+        #               'labor':3}
         self.cash_buffer = 10                   ## when cash balance below that, will request for credit
         # self._inventory._perishable.append('labor') 
         # self._inventory._perishable.append('consumption_good') 
@@ -82,11 +82,14 @@ class Firm(abce.Agent, abce.Firm):
         ## a naive production adjustment 
         if self.balance_sheet['consumption_good'] is None or self.iter_memory_current['actual_production'] is None:
             pass        
+        
         elif self.balance_sheet['consumption_good'] == 0 :
-            self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['planned_production']*1.2)  ## increase by 20%
+            self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['planned_production']*1.1)  ## increase by 20%
+            self.iter_memory_current['price_consumption_good'] *= 1.1 
+            
         elif self.balance_sheet['consumption_good'] > 0:
-            self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['actual_production']*0.8)  ## shrink production based on inventory
-
+            self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['actual_production']*0.9)  ## shrink production based on inventory
+            self.iter_memory_current['price_consumption_good'] *= 0.9 
         
         ## updated label needed 
         self.iter_memory_current['labor_needed'] = math.ceil(self.iter_memory_current['planned_production']/self.cobb_douglas_multiplier)
@@ -153,7 +156,8 @@ class Firm(abce.Agent, abce.Firm):
             n_openings = n_hires - num_hired        ## get remaining opeining positions 
             for idx,application in enumerate(sorted_applications[:n_hires]):
                 if idx < n_openings:                 ## make sure we don exceed max hiring positions 
-                    self.send(('household',application['household_id']),'conditional_offer',{'firm_id':self.id})
+                    self.send(('household',application['household_id']),'conditional_offer',{'firm_id':self.id,
+                                                                                             'salary':application['price']*random.normalvariate(1.1,0.1)})
         else:
             ## else do nothing 
             pass
@@ -182,11 +186,13 @@ class Firm(abce.Agent, abce.Firm):
         Currently, we are reaching out to all households available in the market, assuming no frictions
         Some other assumption like, can only apply to x number of household can be implemented as well 
         """
-        for h in range(self.simulation_parameters['n_households']):
-            self.send(('household',h),'product_ad',{'firm_id':self.id,
-                                                    'product':'consumption_good',
-                                                    'amount':1,
-                                                    'price':1})    ## price needs to be determined by some function  
+        available_goods = self.not_reserved('consumption_good')
+        if available_goods > 0 :
+            for h in range(self.simulation_parameters['n_households']):                                                 ## advertise to all households 
+                self.send(('household',h),'product_ad',{'firm_id':self.id,
+                                                        'product':'consumption_good',
+                                                        'amount':1,
+                                                        'price':self.iter_memory_current['price_consumption_good']})    ## price needs to be determined by some function  
         
     def fill_order(self,verbose=False):
         """
@@ -211,21 +217,21 @@ class Firm(abce.Agent, abce.Firm):
                 self.sell(('household', random.randint(0, self.simulation_parameters['n_households']-1)), 
                           'consumption_good', 
                           quantity=1, 
-                          price=1)
+                          price=self.iter_memory_current['price_consumption_good'])
         else:
             ''' sell goods to specified household ''' 
             available_goods = self.not_reserved('consumption_good')
             if available_goods>0:
                 self.sell(('household', household_id), 
                           'consumption_good', 
-                          quantity=min(n_order,available_goods),                 # only offer available amount 
-                          price=1)                                               # price need to be determined latter 
+                          quantity=min(n_order,available_goods),                                # only offer available amount 
+                          price=self.iter_memory_current['price_consumption_good'])             # 
     
     def refresh(self):
         #### reset # labor available  
         #n_labor = self.not_reserved('labor')
-        self.destroy('labor')               ## destroy all available labors 
-        self.destroy('consumption_good')    ## destroy all good produced in this round 
+        self.destroy('labor')                                                                   ## destroy all available labors 
+        self.destroy('consumption_good')                                                        ## destroy all good produced in this round 
         
     
     

@@ -11,3 +11,11 @@ in requirements.txt
 
 # Directory
 
+# Current Status
+- Finished the basic set up of a simple 3 sector model 
+- In the 3 sector model, firm can make loan request and repay debt to banks 
+- Finished price adjustment to labor market and good market 
+
+# To do 
+- validate price adjustment is working correctly 
+- add taylor rule for interest rate adjustment 
