@@ -13,13 +13,17 @@ import random
 class Bank(abce.Agent):
     def init(self, simulation_parameters):
         self.simulation_parameters = simulation_parameters
-        self.interest_rate = 0.02
+        self.policy_rate = 0.03
         self.create('money', 1000000)
         self.financial_account = {'outstanding_loan':0,
                                   'interest_payment':0,
                                   'bad_loan':0,
                                   }
-
+    def update_policy_rate(self):
+        ## dummy decistion function for testing purpose 
+        self.policy_rate += self.time*0.01 ## increate 1 % by each round ; for testing only  
+        
+        
 
     def collect_payment(self):
         msgs = self.get_messages('debt_payment')
@@ -32,7 +36,7 @@ class Bank(abce.Agent):
             self.financial_account['outstanding_loan'] -= m['amount']
             self.financial_account['bad_loan'] += m['amount']
 
-        return None
+        #return None
 
     def distribute_credit(self,verbose=False):
         msgs = self.get_messages('corporate_debt')
@@ -47,8 +51,16 @@ class Bank(abce.Agent):
             if verbose:
                 print('send credit to firm id:{}; credit:{}'.format(m['firm_id'],m['amount']))
         
-        return None
+        #return None
     
     def log_balance_sheet(self,verbose=False):
         if verbose:
             print('bank balance:{}'.format(self.financial_account))
+            
+    def return_public_info(self):
+        
+        res = {'Group':'Bank',
+               'Id':self.id,
+               'policy_rate': self.policy_rate}
+        
+        return res

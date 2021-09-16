@@ -40,20 +40,25 @@ class Firm(abce.Agent, abce.Firm):
     #################################
     #### Financial Market Open ###### 
     #################################
-    def check_financial_viability(self,service_debt = True):
+    def receive_policy_rate_info(self,info):
+        self.iter_memory_current['market_interest']=info[0][0]['policy_rate']
+    
+    
+    def check_financial_viability(self,verbose=False):
         """
         check sovency status, payback bank, delete/refill agent 
         """
         
         #print(self.id,self.possessions())
         #print(self.id,self.iter_memory_current['balance_sheet']['debt'],self.iter_memory_current['market_interest'])
+        
         interest_payment = self.balance_sheet['debt'] * self.iter_memory_current['market_interest'] 
         principle_payment = self.balance_sheet['debt'] * self.iter_memory_current['amortization_rate']
         debt_service = interest_payment + principle_payment
         solvency_status = self.balance_sheet['money'] >= debt_service
         self.iter_memory_current['solvency_status'] = solvency_status
         
-        if service_debt == True:
+        if solvency_status == True:
             ## send money and message to bank 
             self.give(('bank',0),'money',debt_service)
             self.send(('bank',0),'debt_payment',{'interest_payment':interest_payment,
@@ -61,13 +66,23 @@ class Firm(abce.Agent, abce.Firm):
             ## update balance
             self.balance_sheet['money'] = self.not_reserved('money')
             self.balance_sheet['debt']-= principle_payment
+            
+            if verbose:
+                print('market interest : {}; Send {} to bank'.format(self.iter_memory_current['market_interest'],debt_service))
+                
             return None
+        
         else:
             ## Firm default / liquidate all assets 
             self.give(('bank',0),'money',self.not_reserved('money'))
             ## calculate bad loand amount 
             bad_loan = self.balance_sheet['debt']+interest_payment - self.not_reserved('money')
             self.send(('bank',0),'bad_loan',{'amount':bad_loan})
+            
+            if verbose:
+                print('market interest : {}; Send {} to bank; Firm default'.format(self.iter_memory_current['market_interest'],
+                                                                                         self.not_reserved('money')))
+            
             ## return id for deletion 
             return 'firm',self.id
          

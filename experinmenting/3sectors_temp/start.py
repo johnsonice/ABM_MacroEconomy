@@ -16,7 +16,7 @@ simulation_parameters = {'random_seed': 1,
                          'n_banks':1,
                          'rounds':10,
                          'sub_hiring_rounds':4,
-                         'sub_purchase_rounds':2}
+                         'sub_purchase_rounds':1}
 
 w = Simulation(processes=1) ## set to 1 for debugging purpose 
 
@@ -29,20 +29,31 @@ for r in range(simulation_parameters['rounds']):
     w.advance_round(r)
     print('itetration:{}'.format(w.time))
     
+    ###########################
+    ## Publish Policy Rate 
+    ###########################
+    
+    banks.update_policy_rate()
+    policy_rate_info = banks.return_public_info()
     
     ###########################
     #### Financial Market open#
     ###########################
-    d_firms = firms.check_financial_viability()
+    
+    firms.receive_policy_rate_info(info=policy_rate_info)
+    
+    d_firms = firms.check_financial_viability(verbose=True)
     banks.collect_payment()
     
     ## delete default firms                                                         ## also need to refill firms if needed 
     dfs = [i for i in d_firms[0] if i is not None]
     if len(dfs)>0:
         firms.delete_agents(dfs)
-        print("Deletc frims: {}".foramt(dfs))
+        print("Delete frims: {}".format(dfs))
     else:
         print('no frims dropped out this round')
+    
+    households.receive_available_firms(firms.names)
     
     ## plan production and get loans 
     firms.plan_production(verbose=True)
@@ -98,6 +109,7 @@ for r in range(simulation_parameters['rounds']):
     hb = households.log_balance(verbose=False)                                      ## put all info in balance sheet
     (households + firms).refresh()                                                  ## firms labor = 0 ; household.employer = none
                                                                                     ## check order = None
+                                                                                    
                                                                                   
     # firms.panel_log(goods=['consumption_good'])
     # households.panel_log(goods=['consumption_good'])

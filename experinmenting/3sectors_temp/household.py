@@ -14,6 +14,7 @@ class Household(abce.Agent, abce.Household):
         self.utility_function = self.create_cobb_douglas_utility_function({"consumption_good": 1})
         self.accumulated_utility = 0
         self.employer = None
+        self.available_firms = None
         self._inventory._perishable.append('labor')                         ## TODO simplify this
         self.checkorder = None
         self.labor_price = 4 + random.normalvariate(1,0.2)                  ## some random distribution of wages requirments
@@ -23,6 +24,10 @@ class Household(abce.Agent, abce.Household):
     #################################
     #### Labor Market operations 
     #################################
+    
+    def receive_available_firms(self,fs):
+        self.available_firms = fs
+        
     def apply_for_jobs(self):
         """
         Currently, we are applying to all firms available in the market, assuming no frictions
@@ -31,8 +36,8 @@ class Household(abce.Agent, abce.Household):
         """
         if self.employer is None:
             if self.time[1] == 0:
-                for f in range(self.simulation_parameters['n_firms']):                  ## send applications to all firms 
-                    self.send(('firm',f),'application',{'household_id':self.id,
+                for f in self.available_firms:                  ## send applications to all firms 
+                    self.send(f,'application',{'household_id':self.id,
                                                           'product':'labor',
                                                           'amount':1,
                                                           'price':self.labor_price})
