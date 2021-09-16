@@ -1,5 +1,7 @@
 import abcEconomics as abce
 import random, math
+from utils import setup_custom_logger
+logger = setup_custom_logger(__name__)
 #from random import shuffle, randint
 
 class Household(abce.Agent, abce.Household):
@@ -35,39 +37,41 @@ class Household(abce.Agent, abce.Household):
 
         """
         if self.employer is None:
-            if self.time[1] == 0:
-                for f in self.available_firms:                  ## send applications to all firms 
+            if self.time[1] == 0:                                                                   ## first time apply
+                for f in self.available_firms:                                                      ## send applications to all firms 
                     self.send(f,'application',{'household_id':self.id,
                                                           'product':'labor',
                                                           'amount':1,
                                                           'price':self.labor_price})
-            else:
-                self.labor_price = self.labor_price-random.normalvariate(0,0.2)            ## lower asking price
-                for f in range(self.simulation_parameters['n_firms']):                  ## send applications to all firms 
-                    self.send(('firm',f),'application',{'household_id':self.id,
+            else:                                                                                   ## second time apply, lower price
+                self.labor_price = self.labor_price-random.normalvariate(0,0.2)                     ## lower asking price
+                for f in self.available_firms:                                                      ## send applications to all firms 
+                    self.send(f,'application',{'household_id':self.id,
                                                           'product':'labor',
                                                           'amount':1,
                                                           'price':self.labor_price})
                     
-    def take_offer(self,print_decision=False):
+    def take_offer(self,verbose=False):
         """
         pick one conditional offer and sell labor 
         """
         if self.employer is None:
-            #print(self.group, self.id)
+            #logger.info(self.group, self.id)
             msgs = self.get_messages('conditional_offer')
             employer_id=None ## initiate e_id as none
             
             if len(msgs)>0:
-                sorted_offers = sorted(msgs, key=lambda k: k['salary']) 
-                employer_id =  sorted_offers[0]['firm_id']                   ## decide on one offer
+                sorted_offers = sorted(msgs, key=lambda k: k['salary'],reverse=True)        ## take the highest offer
+                employer_id =  sorted_offers[0]['firm_id']                                  ## decide on one offer
                 salary = sorted_offers[0]['salary'] 
                 ## sell labor to firm 
                 self.sell_labor(firm_id = employer_id,salary=salary)
                 
-                
-            if print_decision:
-                print('household id: {}, take offer :{}'.format(self.id,employer_id))
+                if verbose:
+                    logger.info('household id: {}, take offer :{}, at price: {}; all_offers:{}'.format(self.id,
+                                                                                                       employer_id,
+                                                                                                       salary,
+                                                                                                       sorted_offers))
             
         return self.balance_sheet
     
@@ -95,9 +99,9 @@ class Household(abce.Agent, abce.Household):
             
         if verbose:
             if self.checkorder is not None:
-                print(vars(self.checkorder),self.employer)
+                logger.info(vars(self.checkorder),self.employer)
             else:
-                print(self.checkorder,self.employer)
+                logger.info(self.checkorder,self.employer)
         
     #################################
     #### Good Market operations 
@@ -126,7 +130,7 @@ class Household(abce.Agent, abce.Household):
                 n_buy = min_consume                                                                 ## minimum purchase is 1 
             
             if verbose:
-                print('--- household id:{}; picked product offer: {}, # of purchases:{}'.format(self.id,picked_ad,n_buy))
+                logger.info('--- household id:{}; picked product offer: {}, # of purchases:{}'.format(self.id,picked_ad,n_buy))
                                                                        
             self.send(('firm',picked_ad['firm_id']),
                       'purchase_order',
@@ -140,7 +144,7 @@ class Household(abce.Agent, abce.Household):
             self.accept(offer,offer.quantity)                                                   ## quantity is calculated in messaging section
         
         if verbose:
-            print("household id: {}, take comsumer gppd offer:{}".format(self.id,offers))
+            logger.info("household id: {}, take comsumer gppd offer:{}".format(self.id,offers))
         
     def consumption(self):
         """ 
@@ -151,7 +155,7 @@ class Household(abce.Agent, abce.Household):
         self.log('HH', {'': self.accumulated_utility})
 
 
-    def refresh(self):
+    def refresh(self,verbose=False):
         #### reset employer 
         self.employer = None
         self.checkorder = None
@@ -163,12 +167,12 @@ class Household(abce.Agent, abce.Household):
         Parameters
         ----------
         verbose : TYPE, optional
-            Print out put for debugging. The default is False.
+            logger.info out put for debugging. The default is False.
         ----------
         """
         self.balance_sheet = self.possessions()
         self.balance_sheet['employer'] = self.employer
         if verbose:
-            print('household id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
+            logger.info('household id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
 
         return self.balance_sheet

@@ -1,6 +1,12 @@
 import abcEconomics as abce
 import random
 import math
+import logging
+import copy
+import pandas as pd
+from utils import setup_custom_logger
+logger = setup_custom_logger(__name__)
+
 
 class Firm(abce.Agent, abce.Firm):
     def init(self,simulation_parameters):
@@ -21,6 +27,7 @@ class Firm(abce.Agent, abce.Firm):
         self.cash_buffer = 10                   ## when cash balance below that, will request for credit
         # self._inventory._perishable.append('labor') 
         # self._inventory._perishable.append('consumption_good') 
+        self.checkorders = []
         self.pf = self.create_cobb_douglas(self.output, self.cobb_douglas_multiplier, self.inputs)     ## need to understand this a bit more 
         self.balance_sheet = {'money':self.not_reserved('money'),
                               'consumption_good':None,
@@ -30,11 +37,14 @@ class Firm(abce.Agent, abce.Firm):
                                    'planned_production': 10,                                            ## very random, default to 4 for now
                                    'labor_needed': 2,
                                    'actual_production':None,
+                                   'new_credit_received':0,
                                    'balance_sheet':self.balance_sheet,
                                    'market_interest':0.02,
                                    'amortization_rate':0.05,
                                    'price_consumption_good':2,
-                                   'price_labor':5}
+                                   'price_labor':5,
+                                   'labor_hired':[],
+                                   'goods_sold':[]}
         self.iter_memory_history = []
         
     #################################
@@ -49,8 +59,8 @@ class Firm(abce.Agent, abce.Firm):
         check sovency status, payback bank, delete/refill agent 
         """
         
-        #print(self.id,self.possessions())
-        #print(self.id,self.iter_memory_current['balance_sheet']['debt'],self.iter_memory_current['market_interest'])
+        #logger.info(self.id,self.possessions())
+        #logger.info(self.id,self.iter_memory_current['balance_sheet']['debt'],self.iter_memory_current['market_interest'])
         
         interest_payment = self.balance_sheet['debt'] * self.iter_memory_current['market_interest'] 
         principle_payment = self.balance_sheet['debt'] * self.iter_memory_current['amortization_rate']
@@ -68,7 +78,7 @@ class Firm(abce.Agent, abce.Firm):
             self.balance_sheet['debt']-= principle_payment
             
             if verbose:
-                print('market interest : {}; Send {} to bank'.format(self.iter_memory_current['market_interest'],debt_service))
+                logger.info('market interest : {}; Send {} to bank'.format(self.iter_memory_current['market_interest'],debt_service))
                 
             return None
         
@@ -80,7 +90,7 @@ class Firm(abce.Agent, abce.Firm):
             self.send(('bank',0),'bad_loan',{'amount':bad_loan})
             
             if verbose:
-                print('market interest : {}; Send {} to bank; Firm default'.format(self.iter_memory_current['market_interest'],
+                logger.info('market interest : {}; Send {} to bank; Firm default'.format(self.iter_memory_current['market_interest'],
                                                                                          self.not_reserved('money')))
             
             ## return id for deletion 
@@ -110,8 +120,8 @@ class Firm(abce.Agent, abce.Firm):
         self.iter_memory_current['labor_needed'] = math.ceil(self.iter_memory_current['planned_production']/self.cobb_douglas_multiplier)
         
         if verbose:
-            ## print info for debugging
-            print('id:{}; previous inventory:{}; planned production:{}; labor needed:{}'.format(self.id,
+            ## logger.info info for debugging
+            logger.info('id:{}; previous inventory:{}; planned production:{}; labor needed:{}'.format(self.id,
                                                                                                 self.iter_memory_current['balance_sheet']['consumption_good'],
                                                                                                 self.iter_memory_current['planned_production'],
                                                                                                 self.iter_memory_current['labor_needed']))
@@ -131,7 +141,7 @@ class Firm(abce.Agent, abce.Firm):
             credit_needed = 0 
             
         if verbose:
-            print('id:{}; credit needed:{}'.format(self.id,credit_needed))
+            logger.info('id:{}; credit needed:{}'.format(self.id,credit_needed))
         
         return self.id,credit_needed
         
@@ -140,10 +150,11 @@ class Firm(abce.Agent, abce.Firm):
         msgs = self.get_messages('corporate_credit')
         for m in msgs:
             self.balance_sheet['debt'] += m['amount']
-        
+            self.iter_memory_current['new_credit_received']+=m['amount']
+            
         return None
         
-    def filter_applications_and_send_offer(self,n_hires=5,print_apps=False):
+    def filter_applications_and_send_offer(self,n_hires=5,verbose=False):
         """
         send out conditional offer to qualified candidates
         
@@ -156,7 +167,7 @@ class Firm(abce.Agent, abce.Firm):
         -------
         None
         """
-        #print(self.group, self.id)
+        #logger.info(self.group, self.id)
         num_hired = self.not_reserved('labor')
         n_hires = self.iter_memory_current['labor_needed']
         
@@ -165,8 +176,8 @@ class Firm(abce.Agent, abce.Firm):
             msgs = self.get_messages('application')
             sorted_applications = sorted(msgs, key=lambda k: k['price']) 
             
-            if print_apps:
-                print('--- firm id:{}; sorted application: {}'.format(self.id,sorted_applications[:n_hires]))
+            if verbose:
+                logger.info('--- firm id:{}; sorted application: {}'.format(self.id,sorted_applications[:int(n_hires-num_hired) ]))
             
             n_openings = n_hires - num_hired        ## get remaining opeining positions 
             for idx,application in enumerate(sorted_applications[:n_hires]):
@@ -180,11 +191,13 @@ class Firm(abce.Agent, abce.Firm):
     def buy_inputs(self,verbose=False):
         oo = self.get_offers("labor")
         for offer in oo:
-            self.accept(offer,min(offer.quantity,
+            order = self.accept(offer,min(offer.quantity,
                                    math.floor(self.not_reserved('money')/offer.price)))
+            if order is not None:
+                self.iter_memory_current['labor_hired'].append(order) 
             
         if verbose:
-            print('id:{}; labor hired {}'.format(self.id,self.possessions()['labor']))
+            logger.info('id:{}; labor hired {}'.format(self.id,self.possessions()['labor']))
 
     def production(self):
         available_inputs = self.not_reserved('labor')
@@ -193,6 +206,7 @@ class Firm(abce.Agent, abce.Firm):
             #self.produce_use_everything()
             self.produce(self.pf, prod_inputs)
         
+        ## update iter memory 
         self.iter_memory_current['actual_production'] = available_inputs * self.cobb_douglas_multiplier
         
 
@@ -220,7 +234,7 @@ class Firm(abce.Agent, abce.Firm):
             self.sell_goods(household_id = msg['household_id'],n_order = msg['n_orders'])
             
         if verbose:
-            print('firm id:{}, orders to be filled: {}'.format(self.id,msgs))
+            logger.info('firm id:{}, orders to be filled: {}'.format(self.id,msgs))
         
         
     def sell_goods(self,household_id=None,n_order=None):
@@ -237,19 +251,37 @@ class Firm(abce.Agent, abce.Firm):
             ''' sell goods to specified household ''' 
             available_goods = self.not_reserved('consumption_good')
             if available_goods>0:
-                self.sell(('household', household_id), 
-                          'consumption_good', 
-                          quantity=min(n_order,available_goods),                                # only offer available amount 
-                          price=self.iter_memory_current['price_consumption_good'])             # 
+                order = self.sell(('household', household_id), 
+                                  'consumption_good', 
+                                  quantity=min(n_order,available_goods),                                # only offer available amount 
+                                  price=self.iter_memory_current['price_consumption_good'])             # 
+                        
+                self.checkorders.append(order)
     
-    def refresh(self):
+    def record_order_status(self):
+        for o in self.checkorders:
+            if o.status == 'accepted':
+                res = {'receiver':o.receiver,
+                       'quantity':o.final_quantity,
+                       'price':o.price}
+                self.iter_memory_current['goods_sold'].append(copy.copy(res))
+    
+    def refresh(self,verbose= False):
         #### reset # labor available  
         #n_labor = self.not_reserved('labor')
         self.destroy('labor')                                                                   ## destroy all available labors 
         self.destroy('consumption_good')                                                        ## destroy all good produced in this round 
+        self.checkorders = []
         
+        ## reset some memory 
+        self.iter_memory_current['labor_hired'] = []
+        self.iter_memory_current['goods_sold'] = []
+        self.iter_memory_current['new_credit_received'] = 0
     
-    
+        ## print simple summary 
+        if verbose:
+            logger.info('firm id:{} ; memory: {}'.format(self.id,self.iter_memory_current))
+            
     def log_balance(self,verbose=False):
         """
         DES: log all necessary info
@@ -257,19 +289,28 @@ class Firm(abce.Agent, abce.Firm):
         Parameters
         ----------
         verbose : TYPE, optional
-            Print out put for debugging. The default is False.
+            logger.info out put for debugging. The default is False.
         ----------
         """
         self.balance_sheet.update(self.possessions())
         self.iter_memory_current['balance_sheet'] = self.balance_sheet
+        self.iter_memory_current['iter'] = self.time[0]
+        ## calculate average labor cost 
+        labor_df = pd.DataFrame(self.iter_memory_current['labor_hired'])
+        if len(labor_df)>0:
+            self.iter_memory_current['price_labor'] = abs(labor_df.money.dot(labor_df.labor))/abs(labor_df.labor.sum())
+        
+        ## calculate consumer good price 
+        goods_df = pd.DataFrame(self.iter_memory_current['goods_sold'])
+        if len(goods_df)>0:
+            self.iter_memory_current['price_consumption_good'] = abs(goods_df.price.dot(goods_df.quantity))/abs(goods_df.quantity.sum())
+        
+        ## add to history
+        self.iter_memory_history.append(copy.copy(self.iter_memory_current))
+        
+        ## print info 
         if verbose:
-            print('firm id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
+            logger.info('firm id:{} ; memory: {}'.format(self.id,self.iter_memory_current))
         
-        return self.balance_sheet
+        return self.iter_memory_current
         
-    # def sell_goods(self):
-    #     """ offers one unit of labor to firm 0, for the price of 1 "money" """
-    #     oo = self.get_offers(self.output)
-    #     for offer in oo:
-    #         self.accept(offer, min(offer.quantity,
-    #                                self.possession(self.output)))

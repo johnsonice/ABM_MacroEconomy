@@ -7,6 +7,8 @@ Created on Sun Aug  8 21:53:53 2021
 """
 import abcEconomics as abce
 import random
+from utils import setup_custom_logger
+logger = setup_custom_logger(__name__)
 #from optimization_functions import optimization
 
 
@@ -23,6 +25,12 @@ class Bank(abce.Agent):
         ## dummy decistion function for testing purpose 
         self.policy_rate += self.time*0.01 ## increate 1 % by each round ; for testing only  
         
+        ## to do: follow taylor rule
+        # r = p + 0.5y + 0.5(p - 2) + 2
+        # Where:
+        # r = nominal fed funds rate
+        # p = the rate of inflation
+        # y = the percent deviation between current real GDP and the long-term linear trend in GDP 
         
 
     def collect_payment(self):
@@ -47,15 +55,15 @@ class Bank(abce.Agent):
             ## record load 
             self.financial_account['outstanding_loan'] += m['amount']
             
-            ## print for debugging 
+            ## logger.info for debugging 
             if verbose:
-                print('send credit to firm id:{}; credit:{}'.format(m['firm_id'],m['amount']))
+                logger.info('send credit to firm id:{}; credit:{}'.format(m['firm_id'],m['amount']))
         
         #return None
     
     def log_balance_sheet(self,verbose=False):
         if verbose:
-            print('bank balance:{}'.format(self.financial_account))
+            logger.info('bank balance:{}'.format(self.financial_account))
             
     def return_public_info(self):
         
