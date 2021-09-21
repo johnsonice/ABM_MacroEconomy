@@ -9,6 +9,6 @@ simulation_parameters = {'random_seed': 1,
                          'n_firms':4,
                          'n_households':20,
                          'n_banks':1,
-                         'rounds':2,
+                         'rounds':10,
                          'sub_hiring_rounds':4,
-                         'sub_purchase_rounds':1}
+                         'sub_purchase_rounds':4}

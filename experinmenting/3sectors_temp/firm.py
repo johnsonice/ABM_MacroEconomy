@@ -41,15 +41,19 @@ class Firm(abce.Agent, abce.Firm):
                                    'balance_sheet':self.balance_sheet,
                                    'market_interest':0.02,
                                    'amortization_rate':0.05,
-                                   'price_consumption_good':2,
+                                   'price_consumption_good':2 + random.normalvariate(0,0.1),
                                    'price_labor':5,
                                    'labor_hired':[],
                                    'goods_sold':[]}
+        self.out_iter_memory_current = str(self.iter_memory_current)
         self.iter_memory_history = []
         
     #################################
     #### Financial Market Open ###### 
     #################################
+    def debug(self):
+        logger.info("{},{}".format(self.id,random.normalvariate(1,0.2)))
+    
     def receive_policy_rate_info(self,info):
         self.iter_memory_current['market_interest']=info[0][0]['policy_rate']
     
@@ -204,11 +208,19 @@ class Firm(abce.Agent, abce.Firm):
         prod_inputs = {'labor':available_inputs}
         if available_inputs>0:
             #self.produce_use_everything()
-            self.produce(self.pf, prod_inputs)
+            output = self.produce(self.pf, prod_inputs)
         
         ## update iter memory 
         self.iter_memory_current['actual_production'] = available_inputs * self.cobb_douglas_multiplier
         
+
+    def update_pricing(self,adj_factor=0.9):
+        '''
+        function to adjust product price within a round 
+
+        '''
+        self.iter_memory_current['price_consumption_good'] *= adj_factor
+            
 
     def advertise_product(self):
         """
@@ -217,6 +229,9 @@ class Firm(abce.Agent, abce.Firm):
         """
         available_goods = self.not_reserved('consumption_good')
         if available_goods > 0 :
+            if self.time[2]>0: ## do not update in the first subround
+                self.update_pricing(adj_factor=0.9)
+                
             for h in range(self.simulation_parameters['n_households']):                                                 ## advertise to all households 
                 self.send(('household',h),'product_ad',{'firm_id':self.id,
                                                         'product':'consumption_good',
@@ -276,21 +291,21 @@ class Firm(abce.Agent, abce.Firm):
         ## reset some memory 
         self.iter_memory_current['labor_hired'] = []
         self.iter_memory_current['goods_sold'] = []
-        self.iter_memory_current['new_credit_received'] = 0
-    
+        
         ## print simple summary 
         if verbose:
             logger.info('firm id:{} ; memory: {}'.format(self.id,self.iter_memory_current))
+            
+        ## empty memory slot for credit
+        self.iter_memory_current['new_credit_received'] = 0
+        
+    
+
             
     def log_balance(self,verbose=False):
         """
         DES: log all necessary info
         
-        Parameters
-        ----------
-        verbose : TYPE, optional
-            logger.info out put for debugging. The default is False.
-        ----------
         """
         self.balance_sheet.update(self.possessions())
         self.iter_memory_current['balance_sheet'] = self.balance_sheet
@@ -312,5 +327,6 @@ class Firm(abce.Agent, abce.Firm):
         if verbose:
             logger.info('firm id:{} ; memory: {}'.format(self.id,self.iter_memory_current))
         
+        self.out_iter_memory_current = str(self.iter_memory_current)
         return self.iter_memory_current
         

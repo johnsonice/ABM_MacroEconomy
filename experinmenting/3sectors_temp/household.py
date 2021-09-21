@@ -21,6 +21,7 @@ class Household(abce.Agent, abce.Household):
         self.checkorder = None
         self.labor_price = 4 + random.normalvariate(1,0.2)                  ## some random distribution of wages requirments
         self.balance_sheet = {}
+        self.out_balance_sheet = str(self.balance_sheet)
     
     
     #################################
@@ -153,7 +154,10 @@ class Household(abce.Agent, abce.Household):
         current_utiliy = self.consume(self.utility_function, ['consumption_good'])
         self.accumulated_utility += current_utiliy
         self.log('HH', {'': self.accumulated_utility})
-
+    
+    #################################
+    #### Clean up memory 
+    #################################
 
     def refresh(self,verbose=False):
         #### reset employer 
@@ -172,6 +176,7 @@ class Household(abce.Agent, abce.Household):
         """
         self.balance_sheet = self.possessions()
         self.balance_sheet['employer'] = self.employer
+        self.out_balance_sheet= str(self.balance_sheet)
         if verbose:
             logger.info('household id:{} ; balalnce: {}'.format(self.id,self.balance_sheet))
 

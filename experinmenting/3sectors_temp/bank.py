@@ -21,9 +21,11 @@ class Bank(abce.Agent):
                                   'interest_payment':0,
                                   'bad_loan':0,
                                   }
+        self.out_financial_account = str(self.financial_account)
+        
     def update_policy_rate(self):
         ## dummy decistion function for testing purpose 
-        self.policy_rate += self.time*0.01 ## increate 1 % by each round ; for testing only  
+        self.policy_rate += self.time*0.00 ## increate 1 % by each round ; for testing only  
         
         ## to do: follow taylor rule
         # r = p + 0.5y + 0.5(p - 2) + 2
@@ -62,6 +64,7 @@ class Bank(abce.Agent):
         #return None
     
     def log_balance_sheet(self,verbose=False):
+        self.out_financial_account = str(self.financial_account)
         if verbose:
             logger.info('bank balance:{}'.format(self.financial_account))
             

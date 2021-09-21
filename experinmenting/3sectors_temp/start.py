@@ -10,9 +10,16 @@ from household import Household
 from bank import Bank
 import config
 from utils import setup_custom_logger,clean_and_refill_firms
+import random
+import numpy as np
+random.seed(config.simulation_parameters['random_seed'])
+np.random.seed(config.simulation_parameters['random_seed'])
+from utils import print_random
+
 logger = setup_custom_logger('main')
 
-w = Simulation(processes=1) ## set to 1 for debugging purpose 
+#%%
+w = Simulation(processes=1,random_seed = config.simulation_parameters['random_seed']) ## set to 1 for debugging purpose 
 
 firms = w.build_agents(Firm, 'firm', config.simulation_parameters['n_firms'], simulation_parameters = config.simulation_parameters)
 households = w.build_agents(Household, 'household', config.simulation_parameters['n_households'],simulation_parameters = config.simulation_parameters)
@@ -45,7 +52,7 @@ for r in range(config.simulation_parameters['rounds']):
     
     banks.distribute_credit(verbose=False)
     firms.record_debt()
-    banks.log_balance_sheet(verbose=True)
+    banks.log_balance_sheet(verbose=False)
     
     ###########################
     #### Labor Market Open ####
@@ -57,8 +64,8 @@ for r in range(config.simulation_parameters['rounds']):
         w.advance_round((r,sub_r_l))                                                ## there could be multiple rounds of applications
         logger.info('itetration: {}'.format(w.time))
         households.apply_for_jobs()                                                 ## send messages to all firms
-        firms.filter_applications_and_send_offer(verbose=False)                      ## filter and message to top 5 candidates
-        households.take_offer(verbose=False)                                         ## hoursehold take the best offer and send back to firm
+        firms.filter_applications_and_send_offer(verbose=False)                     ## filter and message to top 5 candidates
+        households.take_offer(verbose=False)                                        ## hoursehold take the best offer and send back to firm
                                                                                     ## households.sell_labor() already part of take_offer
         firms.buy_inputs(verbose=False)                                             ## firm hire labor from the confirmed offer sent back from candidates
         households.check_job_offer(verbose=False)                                   ## see if is hired and update employer id
@@ -79,22 +86,32 @@ for r in range(config.simulation_parameters['rounds']):
         households.filter_ads(min_consume=1)
         firms.fill_order()
         households.buy_goods()
-        households.consumption()
     
-    firms.record_order_status()
+    
+    firms.record_order_status()                                                     ## record goolds sold for global pricing calculation
+    households.consumption()
+    
     ###########################
     #### Clean up things ######
     ###########################
-    fb = firms.log_balance(verbose=False)                                            ## put all info in balance sheet
+    fb = firms.log_balance(verbose=False)                                           ## put all info in balance sheet
     hb = households.log_balance(verbose=False)                                      ## put all info in balance sheet
-    (households + firms).refresh(verbose= True)                                                  ## firms labor = 0 ; household.employer = none
-                                                                                    ## clear all memories 
-                                                                                                                                    
-    # firms.panel_log(goods=['consumption_good'])
-    # households.panel_log(goods=['consumption_good'])
 
+    #### log status ###
+    firms.panel_log(goods=['production','consumption_good'],
+                    variables=['out_iter_memory_current'])
+    households.panel_log(variables=['accumulated_utility',
+                                    'labor_price',
+                                    'out_balance_sheet'])
+    banks.panel_log(goods=['money'],
+                    variables=['policy_rate',
+                               'out_financial_account'])
+    
+    ## clear memory for next round 
+    (households + firms).refresh(verbose= True)                                     ## firms labor = 0 ; household.employer = none
+                                                                                    ## clear all memories 
 w.finalize()
 
 
 # if __name__ == '__main__':
-    #main(simulation_parameters)
+#     main(simulation_parameters)
