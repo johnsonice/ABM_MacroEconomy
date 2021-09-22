@@ -42,7 +42,8 @@ class Firm(abce.Agent, abce.Firm):
                                    'market_interest':0.02,
                                    'amortization_rate':0.05,
                                    'price_consumption_good':2 + random.normalvariate(0,0.1),
-                                   'price_labor':5,
+                                   'price_labor':4,
+                                   'unit_labor_cost_cap':2*5,
                                    'labor_hired':[],
                                    'goods_sold':[]}
         self.out_iter_memory_current = str(self.iter_memory_current)
@@ -57,6 +58,8 @@ class Firm(abce.Agent, abce.Firm):
     def receive_policy_rate_info(self,info):
         self.iter_memory_current['market_interest']=info[0][0]['policy_rate']
     
+    
+
     
     def check_financial_viability(self,verbose=False):
         """
@@ -100,6 +103,8 @@ class Firm(abce.Agent, abce.Firm):
             ## return id for deletion 
             return 'firm',self.id
          
+
+        
         
     
     def plan_production(self,verbose=False,Q=None):
@@ -132,6 +137,15 @@ class Firm(abce.Agent, abce.Firm):
         
         return self.iter_memory_current['planned_production']
         
+    
+    def calculate_Labor_financing_cost(self):
+        ## cap labor cost 
+        self.iter_memory_current['unit_labor_cost_cap'] = self.iter_memory_current['price_consumption_good']*self.cobb_douglas_multiplier
+        
+        ## should we add a cap on financing cost ?
+        
+        
+        return None
     
     def request_credit(self,verbose=False):
         needed_resource = self.iter_memory_current['labor_needed']*self.iter_memory_current['price_labor']
@@ -176,7 +190,7 @@ class Firm(abce.Agent, abce.Firm):
         n_hires = self.iter_memory_current['labor_needed']
         
         
-        if num_hired < n_hires:  ## check if we hired enough, if not look though offers
+        if num_hired < n_hires:  ## check if we hired enough, if not look through offers
             msgs = self.get_messages('application')
             sorted_applications = sorted(msgs, key=lambda k: k['price']) 
             
@@ -186,8 +200,13 @@ class Firm(abce.Agent, abce.Firm):
             n_openings = n_hires - num_hired        ## get remaining opeining positions 
             for idx,application in enumerate(sorted_applications[:n_hires]):
                 if idx < n_openings:                 ## make sure we don exceed max hiring positions 
+                    if application['price']*1.05 < self.iter_memory_current['unit_labor_cost_cap']:
+                        office_price = application['price']*random.normalvariate(1.05,0.05)
+                    else:
+                        office_price = self.iter_memory_current['unit_labor_cost_cap']*random.normalvariate(1.0,0.01)
+                        
                     self.send(('household',application['household_id']),'conditional_offer',{'firm_id':self.id,
-                                                                                             'salary':application['price']*random.normalvariate(1.1,0.1)})
+                                                                                             'salary':office_price})
         else:
             ## else do nothing 
             pass
@@ -214,7 +233,7 @@ class Firm(abce.Agent, abce.Firm):
         self.iter_memory_current['actual_production'] = available_inputs * self.cobb_douglas_multiplier
         
 
-    def update_pricing(self,adj_factor=0.9):
+    def update_pricing(self,adj_factor=1.0):
         '''
         function to adjust product price within a round 
 

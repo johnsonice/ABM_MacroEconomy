@@ -94,7 +94,7 @@ for r in range(config.simulation_parameters['rounds']):
     ###########################
     #### Clean up things ######
     ###########################
-    fb = firms.log_balance(verbose=False)                                           ## put all info in balance sheet
+    fb = firms.log_balance(verbose=True)                                           ## put all info in balance sheet
     hb = households.log_balance(verbose=False)                                      ## put all info in balance sheet
 
     #### log status ###
@@ -108,7 +108,7 @@ for r in range(config.simulation_parameters['rounds']):
                                'out_financial_account'])
     
     ## clear memory for next round 
-    (households + firms).refresh(verbose= True)                                     ## firms labor = 0 ; household.employer = none
+    (households + firms).refresh(verbose= False)                                     ## firms labor = 0 ; household.employer = none
                                                                                     ## clear all memories 
 w.finalize()
 

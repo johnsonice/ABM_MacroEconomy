@@ -51,7 +51,7 @@ def get_round(r):
     if len(inp)==2:
         return 0 
     else:
-        return inp[0]
+        return inp[:-2]
 
 def calculate_firm_aggregate(df,out_f = None):
     """
@@ -114,7 +114,9 @@ if __name__ == "__main__":
         ## product global statistics 
     agg_firm_df = calculate_firm_aggregate(firm_df) 
     agg_firm_df[['avg_consumption_price','avg_labor_price',
-                 'balance_sheet.money','balance_sheet.debt']].plot(title='Frims agg statistics')
+                 'balance_sheet.money','balance_sheet.debt',
+                 'n_labor_hired','labor_needed']].plot(title='Frims agg statistics',subplots=True)
+    agg_firm_df[['actual_production','n_product_sold']].plot(title='Frims agg statistics 2',subplots=False)
     
     ## process household 
     f = os.path.join(res_folder,'panel_household.csv')
@@ -122,15 +124,14 @@ if __name__ == "__main__":
     hh_df = post_process_hh_log(f,out_f)
         ## product global statistics 
     agg_hh_df = calculate_hh_aggregate(hh_df)
-    agg_hh_df[['money','accumulated_utility','unemployment_rate']].plot(title='Hourseholds agg statistics')
+    agg_hh_df[['money','accumulated_utility','unemployment_rate']].plot(title='Hourseholds agg statistics',subplots=True)
     
     ## process bank 
     f = os.path.join(res_folder,'panel_bank.csv')
     out_f = os.path.join(res_folder,'panel_bank_processed.csv')
     bank_df = post_process_bank_log(f,out_f)
+    bank_df[['policy_rate','outstanding_loan','interest_payment','bad_loan']].plot(title='Bank agg statistics',subplots=True)
 
-    bank_df[['policy_rate','outstanding_loan','interest_payment','bad_loan']].plot(title='Bank agg statistics')
-    #%%
 
     
     
