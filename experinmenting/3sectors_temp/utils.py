@@ -12,7 +12,8 @@ import pandas as pd
 import ast
 import glob
 import os.path
-
+#from firm import Firm
+import config
 
 #%%
 def setup_custom_logger(name):
@@ -28,11 +29,13 @@ def setup_custom_logger(name):
     
     return logger
 
-def clean_and_refill_firms(d_firms,firms,logger):
+def clean_and_refill_firms(d_firms,firms,Firm,logger):
     dfs = [i for i in d_firms[0] if i is not None]
     if len(dfs)>0:
         firms.delete_agents(dfs)
+        firms.create_agents(Agent=Firm,simulation_parameters=config.simulation_parameters,number=len(dfs))
         logger.info("Delete frims: {}".format(dfs))
+        logger.info("{} frims refilled in".format(len(dfs)))
     else:
         pass
         #logger.info('no frims dropped out this round')

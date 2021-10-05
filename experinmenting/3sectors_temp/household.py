@@ -1,6 +1,8 @@
 import abcEconomics as abce
 import random, math
 from utils import setup_custom_logger
+from abcEconomics import NotEnoughGoods
+
 logger = setup_custom_logger(__name__)
 #from random import shuffle, randint
 
@@ -20,6 +22,7 @@ class Household(abce.Agent, abce.Household):
         self._inventory._perishable.append('labor')                         ## TODO simplify this
         self.checkorder = None
         self.labor_price = 4 + random.normalvariate(1,0.2)                  ## some random distribution of wages requirments
+        self.consumption_good_price = self.labor_price
         self.balance_sheet = {}
         self.out_balance_sheet = str(self.balance_sheet)
     
@@ -31,6 +34,13 @@ class Household(abce.Agent, abce.Household):
     def receive_available_firms(self,fs):
         self.available_firms = fs
         
+    def update_labor_asking_price(self,verbose=False):
+        self.labor_price *= 1.05                    ## asking for 5 % salary increast
+        if self.labor_price < self.consumption_good_price:
+            self.labor_price = self.consumption_good_price
+        if verbose:
+            logger.info('household id: {}, asking salary:{}'.format(self.id,self.labor_price))
+                                                                    
     def apply_for_jobs(self):
         """
         Currently, we are applying to all firms available in the market, assuming no frictions
@@ -39,13 +49,14 @@ class Household(abce.Agent, abce.Household):
         """
         if self.employer is None:
             if self.time[1] == 0:                                                                   ## first time apply
+                self.update_labor_asking_price(False)                                               ## calculating asking price when first apply
                 for f in self.available_firms:                                                      ## send applications to all firms 
                     self.send(f,'application',{'household_id':self.id,
                                                           'product':'labor',
                                                           'amount':1,
                                                           'price':self.labor_price})
             else:                                                                                   ## second time apply, lower price
-                self.labor_price = self.labor_price-random.normalvariate(0,0.2)                     ## lower asking price
+                self.labor_price = max(self.labor_price-random.normalvariate(0,0.2),0.0001)                     ## lower asking price
                 for f in self.available_firms:                                                      ## send applications to all firms 
                     self.send(f,'application',{'household_id':self.id,
                                                           'product':'labor',
@@ -63,7 +74,9 @@ class Household(abce.Agent, abce.Household):
             
             if len(msgs)>0:
                 sorted_offers = sorted(msgs, key=lambda k: k['salary'],reverse=True)        ## take the highest offer
-                employer_id =  sorted_offers[0]['firm_id']                                  ## decide on one offer
+                
+                employer_id =  random.choice(sorted_offers[:5])['firm_id']                  ## decide on one offer
+                #employer_id =  sorted_offers[0]['firm_id']                                 ## decide on the highest offer
                 salary = sorted_offers[0]['salary'] 
                 ## sell labor to firm 
                 self.sell_labor(firm_id = employer_id,salary=salary)
@@ -122,9 +135,10 @@ class Household(abce.Agent, abce.Household):
         disposable_money = self.not_reserved('money') - self.cash_buffer                            ## sepend everything
         
         ## calculate # of goods to buy ##
-        #picked_ad =  random.choice(sorted_msgs[:5])                                                ## choice between top 5
+        
         if len(sorted_msgs) > 0:
-            picked_ad = sorted_msgs[0]
+            #picked_ad = sorted_msgs[0]                                                             ## pick the lowest one
+            picked_ad =  random.choice(sorted_msgs[:5])                                             ## choice between top 5
             n_buy =  max(0,math.floor(disposable_money/picked_ad['price']))                         ## can not go negative
             
             if num_purchased == 0 and n_buy <= 0:
@@ -142,8 +156,13 @@ class Household(abce.Agent, abce.Household):
         """ make offers to a ramdom firm for comsumption good """
         offers = self.get_offers("consumption_good")
         for offer in offers:
-            self.accept(offer,offer.quantity)                                                   ## quantity is calculated in messaging section
-        
+            try:
+                self.accept(offer,offer.quantity)                                                   ## quantity is calculated in messaging section
+            except NotEnoughGoods:
+                self.reject(offer)
+            
+            self.consumption_good_price = offer.price
+            
         if verbose:
             logger.info("household id: {}, take comsumer gppd offer:{}".format(self.id,offers))
         

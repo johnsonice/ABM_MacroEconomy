@@ -19,8 +19,8 @@ from utils import print_random
 logger = setup_custom_logger('main')
 
 #%%
-w = Simulation(processes=1,random_seed = config.simulation_parameters['random_seed']) ## set to 1 for debugging purpose 
-
+w = Simulation(random_seed = config.simulation_parameters['random_seed']) ## set to 1 for debugging purpose 
+#processes=1,
 firms = w.build_agents(Firm, 'firm', config.simulation_parameters['n_firms'], simulation_parameters = config.simulation_parameters)
 households = w.build_agents(Household, 'household', config.simulation_parameters['n_households'],simulation_parameters = config.simulation_parameters)
 banks = w.build_agents(Bank, 'bank', config.simulation_parameters['n_banks'],simulation_parameters = config.simulation_parameters)
@@ -43,7 +43,7 @@ for r in range(config.simulation_parameters['rounds']):
     d_firms = firms.check_financial_viability(verbose=False)
     banks.collect_payment()
     ## delete default firms                                                         ## also need to refill firms if needed 
-    clean_and_refill_firms(d_firms,firms,logger)
+    clean_and_refill_firms(d_firms,firms,Firm,logger)
     households.receive_available_firms(firms.names)
     
     ## plan production and get loans 
@@ -60,6 +60,7 @@ for r in range(config.simulation_parameters['rounds']):
     households.refresh_services('labor', derived_from='labor_endowment', units=1)
             # firms.log_balance(verbose=True)                                       ## put all info in balance sheet
             # households.log_balance(verbose=True)                                  ## put all info in balance sheet
+    
     for sub_r_l in range(config.simulation_parameters['sub_hiring_rounds']):
         w.advance_round((r,sub_r_l))                                                ## there could be multiple rounds of applications
         logger.info('itetration: {}'.format(w.time))
@@ -87,14 +88,13 @@ for r in range(config.simulation_parameters['rounds']):
         firms.fill_order()
         households.buy_goods()
     
-    
     firms.record_order_status()                                                     ## record goolds sold for global pricing calculation
     households.consumption()
     
     ###########################
     #### Clean up things ######
     ###########################
-    fb = firms.log_balance(verbose=True)                                           ## put all info in balance sheet
+    fb = firms.log_balance(verbose=False)                                           ## put all info in balance sheet
     hb = households.log_balance(verbose=False)                                      ## put all info in balance sheet
 
     #### log status ###

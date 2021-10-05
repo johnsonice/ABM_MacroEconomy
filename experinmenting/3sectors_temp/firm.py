@@ -5,6 +5,8 @@ import logging
 import copy
 import pandas as pd
 from utils import setup_custom_logger
+# import numpy
+# numpy.seterr(all='raise')
 logger = setup_custom_logger(__name__)
 
 
@@ -17,14 +19,14 @@ class Firm(abce.Agent, abce.Firm):
         there is an initial endowment to avoid bootstrapping problems
         """
         self.simulation_parameters = simulation_parameters
-        self.create('money', 20)
+        self.create('money', 200)
         self.create('consumption_good', 1)                                                             ## initiate with one good 
         self.inputs = {"labor": 1}
         self.output = "consumption_good"      
         self.cobb_douglas_multiplier = 5
         # self.price = {'consumption_good':1,
         #               'labor':3}
-        self.cash_buffer = 10                   ## when cash balance below that, will request for credit
+        self.cash_buffer = 50                   ## when cash balance below that, will request for credit
         # self._inventory._perishable.append('labor') 
         # self._inventory._perishable.append('consumption_good') 
         self.checkorders = []
@@ -34,16 +36,16 @@ class Firm(abce.Agent, abce.Firm):
                               'debt':0}
         self.iter_memory_current ={'iter':0,
                                    'solvency_status': True,
-                                   'planned_production': 10,                                            ## very random, default to 4 for now
-                                   'labor_needed': 2,
+                                   'planned_production': 40,                                            ## very random, default to 4 for now
+                                   'labor_needed': 8,
                                    'actual_production':None,
                                    'new_credit_received':0,
                                    'balance_sheet':self.balance_sheet,
                                    'market_interest':0.02,
-                                   'amortization_rate':0.05,
+                                   'amortization_rate':0.1,
                                    'price_consumption_good':2 + random.normalvariate(0,0.1),
                                    'price_labor':4,
-                                   'unit_labor_cost_cap':2*5,
+                                   'unit_labor_cost_cap':3*5,
                                    'labor_hired':[],
                                    'goods_sold':[]}
         self.out_iter_memory_current = str(self.iter_memory_current)
@@ -118,7 +120,7 @@ class Firm(abce.Agent, abce.Firm):
             pass        
         
         elif self.balance_sheet['consumption_good'] == 0 :
-            self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['planned_production']*1.1)  ## increase by 20%
+            self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['planned_production']*1.1)  ## increase by 10%
             self.iter_memory_current['price_consumption_good'] *= 1.1 
             
         elif self.balance_sheet['consumption_good'] > 0:
@@ -127,6 +129,8 @@ class Firm(abce.Agent, abce.Firm):
         
         ## updated label needed 
         self.iter_memory_current['labor_needed'] = math.ceil(self.iter_memory_current['planned_production']/self.cobb_douglas_multiplier)
+        
+        self.calculate_Labor_financing_cost(True)    ## update max contract it can offer for one unit of labor 
         
         if verbose:
             ## logger.info info for debugging
@@ -138,14 +142,45 @@ class Firm(abce.Agent, abce.Firm):
         return self.iter_memory_current['planned_production']
         
     
-    def calculate_Labor_financing_cost(self):
+    
+    
+    def calculate_Labor_financing_cost(self,verbose=False):
+        
+        """
+        calculate the proporate amount of financing needed based on policy rate 
+        """
+        
         ## cap labor cost 
         self.iter_memory_current['unit_labor_cost_cap'] = self.iter_memory_current['price_consumption_good']*self.cobb_douglas_multiplier
+        if verbose:
+            pass
+            #logger.info('firm id:{}, unit_labor_cost_cap: {}'.format(self.id,self.iter_memory_current['unit_labor_cost_cap']))
         
         ## should we add a cap on financing cost ?
+        needed_resource = self.iter_memory_current['labor_needed']*self.iter_memory_current['price_labor']
+        credit_needed = needed_resource - (self.not_reserved('money') - self.cash_buffer)
         
+        #########################################################
+        ### this function need to be changed latter #############
+        ### based on the price of credit, adjust production #####
+        #########################################################
+        
+        if credit_needed> 0:
+            financing_cost = credit_needed * self.iter_memory_current['market_interest'] * 5 
+            estimated_profit = self.iter_memory_current['planned_production'] * self.iter_memory_current['price_consumption_good']
+            if estimated_profit > financing_cost:
+                pass
+            else:
+                if verbose:
+                    logger.info('firm id:{}, reduce financing to 10%'.format(self.id))
+                credit_needed*0.05
+                available_resources = credit_needed + (self.not_reserved('money') - self.cash_buffer)
+                self.iter_memory_current['labor_needed'] = math.floor(available_resources/self.iter_memory_current['price_labor'])
+                self.iter_memory_current['planned_production'] = self.iter_memory_current['labor_needed'] * self.cobb_douglas_multiplier
         
         return None
+    
+    
     
     def request_credit(self,verbose=False):
         needed_resource = self.iter_memory_current['labor_needed']*self.iter_memory_current['price_labor']
@@ -201,9 +236,9 @@ class Firm(abce.Agent, abce.Firm):
             for idx,application in enumerate(sorted_applications[:n_hires]):
                 if idx < n_openings:                 ## make sure we don exceed max hiring positions 
                     if application['price']*1.05 < self.iter_memory_current['unit_labor_cost_cap']:
-                        office_price = application['price']*random.normalvariate(1.05,0.05)
+                        office_price = max(application['price']+random.normalvariate(0.05,0.05),0.0001)                                 ## sometime price can go to negative or 0, we don't want that
                     else:
-                        office_price = self.iter_memory_current['unit_labor_cost_cap']*random.normalvariate(1.0,0.01)
+                        office_price = max(self.iter_memory_current['unit_labor_cost_cap'] + random.normalvariate(0,0.01),0.0001)       ## sometime price can go to negative or 0, we don't want that
                         
                     self.send(('household',application['household_id']),'conditional_offer',{'firm_id':self.id,
                                                                                              'salary':office_price})
@@ -249,7 +284,7 @@ class Firm(abce.Agent, abce.Firm):
         available_goods = self.not_reserved('consumption_good')
         if available_goods > 0 :
             if self.time[2]>0: ## do not update in the first subround
-                self.update_pricing(adj_factor=0.9)
+                self.update_pricing(adj_factor=0.99)
                 
             for h in range(self.simulation_parameters['n_households']):                                                 ## advertise to all households 
                 self.send(('household',h),'product_ad',{'firm_id':self.id,
@@ -331,8 +366,16 @@ class Firm(abce.Agent, abce.Firm):
         self.iter_memory_current['iter'] = self.time[0]
         ## calculate average labor cost 
         labor_df = pd.DataFrame(self.iter_memory_current['labor_hired'])
-        if len(labor_df)>0:
-            self.iter_memory_current['price_labor'] = abs(labor_df.money.dot(labor_df.labor))/abs(labor_df.labor.sum())
+        if len(labor_df)>0 and labor_df.labor.iloc[0]!=0:
+            try:
+                self.iter_memory_current['price_labor'] = abs(labor_df.money.dot(labor_df.labor))/abs(labor_df.labor.sum())
+            except:
+                pass ## if 0 and 0, dnon't update
+            
+            # if str(self.iter_memory_current['price_labor']).isnumeric():
+            #     pass
+            # else:
+            #     pass
         
         ## calculate consumer good price 
         goods_df = pd.DataFrame(self.iter_memory_current['goods_sold'])

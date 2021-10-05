@@ -6,9 +6,11 @@ Created on Thu Sep 16 09:36:13 2021
 @author: chengyu
 """
 simulation_parameters = {'random_seed': 1,
-                         'n_firms':4,
-                         'n_households':40,
+                         'n_firms':60,
+                         'n_households':400,
                          'n_banks':1,
-                         'rounds':20,
-                         'sub_hiring_rounds':6,
-                         'sub_purchase_rounds':6}
+                         'rounds':200,
+                         'sub_hiring_rounds':7,
+                         'sub_purchase_rounds':7}
+
+
