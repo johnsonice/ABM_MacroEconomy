@@ -18,7 +18,7 @@ in requirements.txt
 - Finish global statisic aggregation (and basic charts)
 
 # To do 
-- validate price adjustment is working correctly 
-- need to add fimrs refill function
+- need to add fimrs refill function (as our last discussion, maybe not refill)
 - tweak settings to make sure results make sense
 - add taylor rule for interest rate adjustment 
+- double check unit labor price cap is working properly 

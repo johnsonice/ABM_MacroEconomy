@@ -10,6 +10,14 @@ from utils import setup_custom_logger
 logger = setup_custom_logger(__name__)
 
 
+## To be implemented 
+## if company wasn't able to hire in previous round, should increase labor price more for the next round 
+## if a company did not manage to produce anything, it will keep that same plan and just increase labor price 
+## maybe we should let firm ovserve market price for consumer goods and labor price 
+
+## More problems
+## debug, why unit labor price cap did not work. ????
+
 class Firm(abce.Agent, abce.Firm):
     def init(self,simulation_parameters):
         """ there are now 2 sectors:
@@ -48,6 +56,9 @@ class Firm(abce.Agent, abce.Firm):
                                    'unit_labor_cost_cap':3*5,
                                    'labor_hired':[],
                                    'goods_sold':[]}
+        ## important note, 'labor_hired' and 'goods_sold' will be refreshed in the end of each round 
+        ## to access previous round of info, use iter_memory_hisotry
+        
         self.out_iter_memory_current = str(self.iter_memory_current)
         self.iter_memory_history = []
         
@@ -84,7 +95,7 @@ class Firm(abce.Agent, abce.Firm):
                                                  'principle_payment': principle_payment})
             ## update balance
             self.balance_sheet['money'] = self.not_reserved('money')
-            self.balance_sheet['debt']-= principle_payment
+            self.balance_sheet['debt'] -= principle_payment
             
             if verbose:
                 logger.info('market interest : {}; Send {} to bank'.format(self.iter_memory_current['market_interest'],debt_service))
@@ -93,15 +104,16 @@ class Firm(abce.Agent, abce.Firm):
         
         else:
             ## Firm default / liquidate all assets 
-            self.give(('bank',0),'money',self.not_reserved('money'))
+            #self.give(('bank',0),'money',self.not_reserved('money'))
+            
             ## calculate bad loand amount 
-            bad_loan = self.balance_sheet['debt']+interest_payment - self.not_reserved('money')
+            bad_loan = self.balance_sheet['debt'] #-self.not_reserved('money') # + interest_payment
             self.send(('bank',0),'bad_loan',{'amount':bad_loan})
             
             if verbose:
-                logger.info('market interest : {}; Send {} to bank; Firm default'.format(self.iter_memory_current['market_interest'],
-                                                                                         self.not_reserved('money')))
-            
+                # logger.info('market interest : {}; Send {} to bank; Firm default'.format(self.iter_memory_current['market_interest'],
+                #                                                                          self.not_reserved('money')))
+                pass
             ## return id for deletion 
             return 'firm',self.id
          
@@ -118,8 +130,14 @@ class Firm(abce.Agent, abce.Firm):
         ## a naive production adjustment 
         if self.balance_sheet['consumption_good'] is None or self.iter_memory_current['actual_production'] is None:
             pass        
+
+        elif self.iter_memory_current['actual_production']==0:
+            ## plan more for labor cost in order to hire more labor 
+            pass
+            #self.iter_memory_current['price_labor'] *=1.05   # increase planned labor cost for 5%
+            ## and then do not change production plan 
         
-        elif self.balance_sheet['consumption_good'] == 0 :
+        elif self.balance_sheet['consumption_good'] == 0:
             self.iter_memory_current['planned_production'] = math.ceil(self.iter_memory_current['planned_production']*1.1)  ## increase by 10%
             self.iter_memory_current['price_consumption_good'] *= 1.1 
             
@@ -234,14 +252,14 @@ class Firm(abce.Agent, abce.Firm):
             
             n_openings = n_hires - num_hired        ## get remaining opeining positions 
             for idx,application in enumerate(sorted_applications[:n_hires]):
-                if idx < n_openings:                 ## make sure we don exceed max hiring positions 
+                if idx < n_openings:                 ## make sure we don't exceed max hiring positions 
                     if application['price']*1.05 < self.iter_memory_current['unit_labor_cost_cap']:
-                        office_price = max(application['price']+random.normalvariate(0.05,0.05),0.0001)                                 ## sometime price can go to negative or 0, we don't want that
+                        offer_price = max(application['price']+random.normalvariate(0.05,0.05),0.0001)                                 ## sometime price can go to negative or 0, we don't want that
                     else:
-                        office_price = max(self.iter_memory_current['unit_labor_cost_cap'] + random.normalvariate(0,0.01),0.0001)       ## sometime price can go to negative or 0, we don't want that
+                        offer_price = max(self.iter_memory_current['unit_labor_cost_cap'] + random.normalvariate(0,0.01),0.0001)       ## sometime price can go to negative or 0, we don't want that
                         
                     self.send(('household',application['household_id']),'conditional_offer',{'firm_id':self.id,
-                                                                                             'salary':office_price})
+                                                                                             'salary':offer_price})
         else:
             ## else do nothing 
             pass

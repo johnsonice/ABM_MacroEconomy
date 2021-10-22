@@ -15,7 +15,7 @@ logger = setup_custom_logger(__name__)
 class Bank(abce.Agent):
     def init(self, simulation_parameters):
         self.simulation_parameters = simulation_parameters
-        self.policy_rate = 0.05
+        self.policy_rate = 0.2
         self.create('money', 10e100)
         self.financial_account = {'outstanding_loan':0,
                                   'interest_payment':0,
