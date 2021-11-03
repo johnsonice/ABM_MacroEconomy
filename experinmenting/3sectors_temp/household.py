@@ -35,7 +35,15 @@ class Household(abce.Agent, abce.Household):
         self.available_firms = fs
         
     def update_labor_asking_price(self,verbose=False):
-        self.labor_price *= 1.05                    ## asking for 5 % salary increast
+        ### ok, here we need to check see if labor is previous hired , if so increase asking price for next round
+        employed = self.balance_sheet.get('employer')
+        if employed:
+            price_multiplier = 1.05
+            #print(employed,price_multiplier)
+        else:
+            price_multiplier = 1
+        
+        self.labor_price *= price_multiplier                    ## asking for x % salary increast
         if self.labor_price < self.consumption_good_price:
             self.labor_price = self.consumption_good_price
         if verbose:

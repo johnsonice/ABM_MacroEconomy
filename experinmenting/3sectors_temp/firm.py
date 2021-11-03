@@ -44,8 +44,8 @@ class Firm(abce.Agent, abce.Firm):
                               'debt':0}
         self.iter_memory_current ={'iter':0,
                                    'solvency_status': True,
-                                   'planned_production': 40,                                            ## very random, default to 4 for now
-                                   'labor_needed': 8,
+                                   'planned_production': 30,                                            ## very random, default to 4 for now
+                                   'labor_needed': 6,
                                    'actual_production':None,
                                    'new_credit_received':0,
                                    'balance_sheet':self.balance_sheet,

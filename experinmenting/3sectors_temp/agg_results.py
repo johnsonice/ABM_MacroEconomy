@@ -38,6 +38,7 @@ def post_process_firm_log(f,out_f=None):
 
 def post_process_hh_log(f,out_f=None):
     df = pd.read_csv(f)
+    df['iter'] = df['round'].apply(get_round)
     # df.index = df.index.astype(int)
     # df.sort_index(inplace=True)
     df = convert_dict_columns(df,'out_balance_sheet')
@@ -98,7 +99,7 @@ def calculate_hh_aggregate(df,out_f = None):
     aggregate hh df for  global statistics 
 
     """
-    df['iter'] = df['round'].apply(get_round)
+    #df['iter'] = df['round'].apply(get_round)
     
     df['employed'] = df['employer'].notnull()
     sum_columns = ['accumulated_utility','money','employed']
@@ -130,13 +131,14 @@ if __name__ == "__main__":
                  'n_labor_hired','labor_needed']].plot(title='Frims agg statistics',subplots=True)
     plt.savefig('result/firm_agg_1.png')
     
-    agg_firm_df[['actual_production','n_product_sold']].plot(title='Frims agg statistics 2',subplots=False)
+    agg_firm_df[['planned_production','actual_production','n_product_sold']].plot(title='Frims agg statistics 2',subplots=False)
     plt.savefig('result/firm_agg_2.png')
     
     ## process household 
     f = os.path.join(res_folder,'panel_household.csv')
     out_f = os.path.join(res_folder,'panel_household_processed.csv')
     hh_df = post_process_hh_log(f,out_f)
+
         ## product global statistics 
     agg_hh_df = calculate_hh_aggregate(hh_df)
     agg_hh_df[['money','accumulated_utility','unemployment_rate']].plot(title='Hourseholds agg statistics',subplots=True)
